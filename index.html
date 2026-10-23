@@ -34,6 +34,7 @@
   #scene { position:fixed; inset:0; z-index:3; overflow:hidden; perspective:300px; perspective-origin:50% 22%; opacity:0; pointer-events:none;
     -webkit-mask-image:linear-gradient(to bottom, transparent 18%, #000 52%); mask-image:linear-gradient(to bottom, transparent 18%, #000 52%); }
   #scene.visible { opacity:1; }
+  #scene.leaving { opacity:0; transition:opacity 2s; }
   #plane { position:absolute; left:50%; bottom:0; width:min(88vw, 980px); height:320vh; transform:translateX(-50%) rotateX(25deg); transform-origin:50% 100%; overflow:hidden; }
   #crawl { position:absolute; left:0; right:0; top:0; will-change:transform;
     font-size:clamp(24px,3.6vw,46px); line-height:1.45; font-weight:700; text-align:justify; letter-spacing:.02em; color:var(--yellow); }
@@ -42,7 +43,7 @@
   #crawl h3 { text-align:center; text-transform:uppercase; font-size:1em; margin:2em 0 .8em; }
   #crawl p { margin:0 0 1.1em; }
   #crawl .center { text-align:center; }
-  #crawl .tiny { font-size:.4em; font-weight:400; margin-top:6em; }
+  #crawl .tiny { font-size:.5em; font-weight:400; margin-top:5em; }
 
   /* Planeta pixelado que aparece cuando la cámara baja al final */
   #planet { position:fixed; inset:0; width:100%; height:100%; z-index:2; image-rendering:pixelated; transform:translateY(100%); pointer-events:none; }
@@ -360,24 +361,38 @@
       [{transform:`translateY(${planeH}px)`}, {transform:`translateY(${-textH}px)`}],
       {duration, easing:'linear', fill:'forwards'});
     crawlAnim.playbackRate = rate;
-    crawlAnim.onfinish = playPan;
     anims.push(crawlAnim);
+    // El final arranca cuando la última línea entra en la zona donde se desvanece,
+    // no cuando termina de recorrer todo el plano (eso era casi un minuto de nada)
+    const lastLine = crawl.lastElementChild, anim = crawlAnim;
+    const watch = () => {
+      if (anim !== crawlAnim) return;
+      // Se mide en coordenadas del plano (el rect proyectado da cualquier cosa fuera de cámara);
+      // a ~88% del plano desde arriba la última línea queda por la mitad de la pantalla
+      const y = new DOMMatrix(getComputedStyle(crawl).transform).m42;
+      if (y + lastLine.offsetTop + lastLine.offsetHeight < planeH * .88) playPan();
+      else setTimeout(watch, 250);
+    };
+    watch();
+    crawlAnim.onfinish = playPan;
   }
   // Final de la película: la cámara baja, las estrellas suben y aparece el planeta
   function playPan() {
+    if (scene.classList.contains('leaving')) return;
+    scene.classList.add('leaving');
     starVelTarget = -16;
     anims.push(planetCv.animate(
       [{transform:'translateY(100%)'}, {transform:'translateY(0)'}],
       {duration: 7000, easing:'cubic-bezier(.3,.1,.25,1)', fill:'forwards'}));
     later(5500, () => { starVelTarget = .3; });
-    later(8000, () => { endcard.classList.add('show'); });
+    later(6000, () => { endcard.classList.add('show'); });
     later(14000, () => { fadeOutMusic(); running = false; });
   }
 
   function start(skipIntro) {
     clearAll();
     endcard.classList.remove('show');
-    scene.classList.remove('visible');
+    scene.classList.remove('visible', 'leaving');
     logo.style.opacity = 0;
     intro.classList.add('hidden');
     paused = false; running = true; pauseBtn.textContent = 'Pausar ⏸';
@@ -414,7 +429,7 @@
   function reset() {
     clearAll(); stopMusic(); running = false; paused = false;
     endcard.classList.remove('show');
-    scene.classList.remove('visible');
+    scene.classList.remove('visible', 'leaving');
     logo.style.opacity = 0;
     intro.classList.remove('hidden');
     pauseBtn.textContent = 'Pausar ⏸';
