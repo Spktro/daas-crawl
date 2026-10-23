@@ -42,6 +42,10 @@
   #crawl h3 { text-align:center; text-transform:uppercase; font-size:1em; margin:2em 0 .8em; }
   #crawl p { margin:0 0 1.1em; }
   #crawl .center { text-align:center; }
+  #crawl .tiny { font-size:.4em; font-weight:400; margin-top:6em; }
+
+  /* Planeta pixelado que aparece cuando la cámara baja al final */
+  #planet { position:fixed; inset:0; width:100%; height:100%; z-index:2; image-rendering:pixelated; transform:translateY(100%); pointer-events:none; }
 
   #yt { position:fixed; left:-400px; top:0; width:200px; height:200px; opacity:0; pointer-events:none; }
 
@@ -52,7 +56,7 @@
   .intro button { font-size:18px; padding:12px 22px; margin-top:10px; border-color:var(--yellow); color:var(--yellow); }
   .hint { position:fixed; z-index:7; right:16px; bottom:18px; color:#777; font-size:12px; opacity:.6; }
 
-  .endcard { position:fixed; z-index:5; inset:0; display:flex; align-items:center; justify-content:center; text-align:center; padding:25px; background:rgba(0,0,0,.85); opacity:0; pointer-events:none; transition:opacity 1.5s; }
+  .endcard { position:fixed; z-index:5; inset:0; display:flex; align-items:flex-start; justify-content:center; text-align:center; padding:10vh 25px 25px; opacity:0; pointer-events:none; transition:opacity 2s; }
   .endcard.show { opacity:1; pointer-events:auto; }
   .endcard h2 { color:var(--yellow); letter-spacing:.08em; font-size:clamp(24px,4vw,48px); }
   .endcard p { color:#fff; max-width:650px; line-height:1.6; margin:0 auto 20px; }
@@ -60,6 +64,7 @@
 </head>
 <body>
 <canvas id="stars"></canvas>
+<canvas id="planet"></canvas>
 
 <section class="intro" id="intro">
   <div class="intro-inner">
@@ -122,6 +127,7 @@
       <p class="center">Que las dependencias sean compatibles y que ningún cambio llegue a producción sin haber sido probado.</p>
       <p class="center">Y que, cuando se ejecute el último despliegue, la galaxia pueda disfrutar de algo extraordinario: una infraestructura que funcione como se esperaba, sin convocar a toda la flota de soporte.</p>
       <p class="center">FIN DEL INFORME DE AVANCE</p>
+      <p class="center tiny">Si usted puede leer esto, no necesita anteojos.</p>
     </article>
   </div>
 </section>
@@ -162,6 +168,7 @@
   const canvas = document.getElementById('stars');
   const ctx = canvas.getContext('2d');
   let w, h, stars = [];
+  let starVel = 1, starVelTarget = 1;   // negativo = las estrellas suben (la cámara baja)
   function resize() {
     const dpr = devicePixelRatio || 1;
     w = canvas.width = innerWidth * dpr;
@@ -174,17 +181,57 @@
   }
   function draw() {
     ctx.fillStyle = '#000'; ctx.fillRect(0,0,w,h);
+    starVel += (starVelTarget - starVel) * .03;
     for (const s of stars) {
-      s.y += s.z * .18;
+      s.y += s.z * .18 * starVel;
       s.t += .02;
       if (s.y > h) { s.y = 0; s.x = Math.random()*w; }
+      if (s.y < 0) { s.y = h; s.x = Math.random()*w; }
       const a = Math.min(.95, s.z) * (.75 + .25*Math.sin(s.t));
       ctx.fillStyle = `rgba(255,255,255,${a})`;
       ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI*2); ctx.fill();
     }
     requestAnimationFrame(draw);
   }
-  resize(); draw(); addEventListener('resize', resize);
+  resize(); draw(); addEventListener('resize', () => { resize(); drawPlanet(); });
+
+  // ===== Planeta pixel-art (desierto, estilo Tatooine) =====
+  const planetCv = document.getElementById('planet');
+  function drawPlanet() {
+    const W = 200, H = Math.round(W * innerHeight / innerWidth);
+    planetCv.width = W; planetCv.height = H;
+    const g = planetCv.getContext('2d');
+    const img = g.createImageData(W, H), d = img.data;
+    const cx = W * .5, cy = H + W * .55, r = W * .75;
+    const bayer = [0,8,2,10,12,4,14,6,3,11,1,9,15,7,13,5];
+    const pal = [[58,30,20],[120,66,38],[176,108,60],[214,156,92],[240,204,140]];
+    const L = [-.45, -.75, .5]; const ln = Math.hypot(...L);
+    const moon = {x: W*.85, y: H*.55, r: Math.max(5, W*.035)};
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const i = (y*W + x) * 4, th = (bayer[(y%4)*4 + x%4] + .5) / 16;
+      const dx = x + .5 - cx, dy = y + .5 - cy, dist = Math.hypot(dx, dy);
+      let c = null, a = 255;
+      if (dist <= r) {
+        const nz = Math.sqrt(1 - (dist/r)**2);
+        let light = (dx/r*L[0] + dy/r*L[1] + nz*L[2]) / ln;
+        // bandas de dunas y algo de ruido
+        const lat = dy / r, band = Math.sin(lat*38 + Math.sin(dx/r*6)*1.4) * .12 + Math.sin(lat*90 + dx*.05) * .05;
+        light = Math.max(0, Math.min(1, light*.95 + .15 + band));
+        c = pal[Math.min(4, Math.floor(light*4 + th))];
+      } else if (dist <= r + 2.5) {
+        c = [110, 170, 230]; a = dist <= r + 1.2 ? 200 : 90;   // atmósfera
+      } else {
+        const mdx = x + .5 - moon.x, mdy = y + .5 - moon.y, md = Math.hypot(mdx, mdy);
+        if (md <= moon.r) {
+          const ml = Math.max(0, (-mdx*.6 - mdy*.6) / moon.r + .55);
+          c = [[60,60,72],[120,118,130],[190,186,196]][Math.min(2, Math.floor(ml*2 + th))];
+        }
+      }
+      if (c) { d[i] = c[0]; d[i+1] = c[1]; d[i+2] = c[2]; d[i+3] = a; }
+    }
+    g.putImageData(img, 0, 0);
+  }
+  drawPlanet();
 
   // ===== Música: intro.mp3 local si existe, si no YouTube =====
   const statusEl = document.getElementById('status');
@@ -284,6 +331,7 @@
   function clearAll() {
     anims.forEach(a => a.cancel()); anims = [];
     crawlAnim = null;
+    starVelTarget = 1;
   }
   // Temporizador hecho con una animación vacía: así se pausa junto con todo lo demás
   function later(ms, fn) {
@@ -312,8 +360,18 @@
       [{transform:`translateY(${planeH}px)`}, {transform:`translateY(${-textH}px)`}],
       {duration, easing:'linear', fill:'forwards'});
     crawlAnim.playbackRate = rate;
-    crawlAnim.onfinish = () => { endcard.classList.add('show'); fadeOutMusic(); running = false; };
+    crawlAnim.onfinish = playPan;
     anims.push(crawlAnim);
+  }
+  // Final de la película: la cámara baja, las estrellas suben y aparece el planeta
+  function playPan() {
+    starVelTarget = -16;
+    anims.push(planetCv.animate(
+      [{transform:'translateY(100%)'}, {transform:'translateY(0)'}],
+      {duration: 7000, easing:'cubic-bezier(.3,.1,.25,1)', fill:'forwards'}));
+    later(5500, () => { starVelTarget = .3; });
+    later(8000, () => { endcard.classList.add('show'); });
+    later(14000, () => { fadeOutMusic(); running = false; });
   }
 
   function start(skipIntro) {
