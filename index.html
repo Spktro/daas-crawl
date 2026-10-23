@@ -122,7 +122,7 @@
       <p>La etapa final exigirá coordinar componentes, resolver problemas pendientes y comprobar que cada funcionalidad cumpla su propósito. Las pruebas permitirán evaluar el comportamiento en escenarios representativos y la documentación facilitará la comprensión y el uso de la solución.</p>
       <p>La graduación espera en el horizonte. Los planos existen, la nave tiene sus primeras piezas ensambladas y los aliados han aportado información valiosa. Ahora queda comprobar que todos los sistemas funcionen juntos.</p>
       <p>Los jóvenes Padawan deberán superar las pruebas finales para demostrar que están preparados para alcanzar el rango de Ingenieros Jedi.</p>
-      <h3>La misión continúa</h3>
+      <h3 id="final">La misión continúa</h3>
       <p>La Comisión de Seguimiento toma conocimiento del estado de avance, de los aportes surgidos del intercambio con el CEDITE y de las actividades pendientes para la finalización del proyecto.</p>
       <p class="center">QUE LA FUERZA ACOMPAÑE LOS DESPLIEGUES.</p>
       <p class="center">Que las dependencias sean compatibles y que ningún cambio llegue a producción sin haber sido probado.</p>
@@ -151,7 +151,7 @@
   <button id="faster">Más rápido +</button>
   <button id="mute">Silenciar 🔇</button>
   <button id="restart">Reiniciar ↻</button>
-  <button id="skip">Saltar al texto ↓</button>
+  <button id="skip">Saltar al final ⏭</button>
 </div>
 <div class="hint">Espacio: pausa · ←/→: velocidad · M: silencio · R: reiniciar</div>
 
@@ -437,7 +437,15 @@
 
   document.getElementById('begin').addEventListener('click', () => start(false));
   document.getElementById('replay').addEventListener('click', () => start(false));
-  document.getElementById('skip').addEventListener('click', () => start(true));
+  // Adelanta el texto hasta "La misión continúa", entrando por la parte baja de la pantalla
+  function skipToEnd() {
+    if (!crawlAnim || scene.classList.contains('leaving')) start(true);
+    if (paused) togglePause();
+    const P = plane.offsetHeight, T = crawl.offsetHeight;
+    const target = document.getElementById('final').offsetTop + P * .05;
+    crawlAnim.currentTime = Math.max(crawlAnim.currentTime, target / (P + T) * crawlAnim.effect.getTiming().duration);
+  }
+  document.getElementById('skip').addEventListener('click', skipToEnd);
   document.getElementById('restart').addEventListener('click', reset);
   document.getElementById('slower').addEventListener('click', () => setRate(1/1.2));
   document.getElementById('faster').addEventListener('click', () => setRate(1.2));
