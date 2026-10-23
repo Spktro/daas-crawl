@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Una nueva esperanza — DaaS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=News+Cycle:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root { --yellow:#ffe81f; --blue:#4bd5ee; }
+  * { box-sizing:border-box; }
+  html, body { margin:0; width:100%; height:100%; overflow:hidden; background:#000; color:var(--yellow); font-family:"News Cycle", "Franklin Gothic Medium", Arial, sans-serif; }
+  #stars { position:fixed; inset:0; width:100%; height:100%; z-index:0; }
+
+  /* Pantalla de inicio */
+  .intro { position:fixed; z-index:6; inset:0; display:flex; align-items:center; justify-content:center; text-align:center; padding:28px; background:#000; transition:opacity .5s ease; }
+  .intro.hidden { opacity:0; pointer-events:none; }
+  .intro-inner { max-width:850px; }
+  .intro h1 { font-size:clamp(28px,5vw,60px); line-height:1.05; margin:0 0 18px; text-transform:uppercase; letter-spacing:.04em; }
+  .intro p { color:#fff2a0; font-size:clamp(15px,2vw,21px); line-height:1.5; margin:0 0 14px; }
+  .intro .status { color:#999; font-size:13px; margin-top:18px; }
+
+  /* "Hace mucho tiempo..." en azul */
+  #longago { position:fixed; z-index:4; inset:0; display:flex; align-items:center; justify-content:center; padding:24px; opacity:0; pointer-events:none; }
+  #longago p { color:var(--blue); font-size:clamp(20px,3.2vw,44px); line-height:1.4; max-width:22ch; margin:0; font-weight:400; letter-spacing:.01em; }
+
+  /* Logo que se aleja */
+  #logo { position:fixed; z-index:4; inset:0; display:flex; align-items:center; justify-content:center; opacity:0; pointer-events:none; }
+  #logo .mark { text-align:center; transform-origin:50% 50%; }
+  #logo .big { font-family:"Arial Black", "Helvetica Neue", Arial, sans-serif; font-weight:900; font-size:clamp(90px,22vw,360px); line-height:.85; letter-spacing:-.02em; color:transparent; -webkit-text-stroke:max(3px,.6vw) var(--yellow); text-transform:uppercase; }
+  #logo .sub { font-family:"Arial Black", Arial, sans-serif; font-size:clamp(14px,3vw,48px); letter-spacing:.25em; color:var(--yellow); margin-top:.2em; }
+
+  /* Escena con perspectiva real: un plano inclinado que se pierde en el horizonte */
+  #scene { position:fixed; inset:0; z-index:3; overflow:hidden; perspective:300px; perspective-origin:50% 22%; opacity:0; pointer-events:none;
+    -webkit-mask-image:linear-gradient(to bottom, transparent 18%, #000 52%); mask-image:linear-gradient(to bottom, transparent 18%, #000 52%); }
+  #scene.visible { opacity:1; }
+  #plane { position:absolute; left:50%; bottom:0; width:min(88vw, 980px); height:320vh; transform:translateX(-50%) rotateX(25deg); transform-origin:50% 100%; overflow:hidden; }
+  #crawl { position:absolute; left:0; right:0; top:0; will-change:transform;
+    font-size:clamp(24px,3.6vw,46px); line-height:1.45; font-weight:700; text-align:justify; letter-spacing:.02em; color:var(--yellow); }
+  #crawl h2 { text-align:center; text-transform:uppercase; font-size:1em; line-height:1.3; margin:0 0 .4em; }
+  #crawl h2.title { font-size:1.6em; margin-bottom:1.2em; }
+  #crawl h3 { text-align:center; text-transform:uppercase; font-size:1em; margin:2em 0 .8em; }
+  #crawl p { margin:0 0 1.1em; }
+  #crawl .center { text-align:center; }
+
+  #yt { position:fixed; left:-400px; top:0; width:200px; height:200px; opacity:0; pointer-events:none; }
+
+  .controls { position:fixed; z-index:7; left:14px; bottom:14px; display:flex; flex-wrap:wrap; gap:8px; opacity:.35; transition:opacity .2s; }
+  .controls:hover { opacity:1; }
+  button { background:rgba(15,15,15,.85); color:#fff; border:1px solid #777; padding:9px 13px; border-radius:5px; font-size:14px; cursor:pointer; font-family:inherit; }
+  button:hover { border-color:var(--yellow); color:var(--yellow); }
+  .intro button { font-size:18px; padding:12px 22px; margin-top:10px; border-color:var(--yellow); color:var(--yellow); }
+  .hint { position:fixed; z-index:7; right:16px; bottom:18px; color:#777; font-size:12px; opacity:.6; }
+
+  .endcard { position:fixed; z-index:5; inset:0; display:flex; align-items:center; justify-content:center; text-align:center; padding:25px; background:rgba(0,0,0,.85); opacity:0; pointer-events:none; transition:opacity 1.5s; }
+  .endcard.show { opacity:1; pointer-events:auto; }
+  .endcard h2 { color:var(--yellow); letter-spacing:.08em; font-size:clamp(24px,4vw,48px); }
+  .endcard p { color:#fff; max-width:650px; line-height:1.6; margin:0 auto 20px; }
+</style>
+</head>
+<body>
+<canvas id="stars"></canvas>
+
+<section class="intro" id="intro">
+  <div class="intro-inner">
+    <h1>Informe de avance de proyecto</h1>
+    <p><strong>Deployment as a Service (DaaS)</strong><br>Automatización de despliegue de servicios en múltiples infraestructuras</p>
+    <button id="begin">Iniciar la misión ▶</button>
+    <div class="status" id="status">Cargando música…</div>
+  </div>
+</section>
+
+<div id="longago"><p>Hace mucho tiempo, en una galaxia no tan lejana…</p></div>
+
+<div id="logo"><div class="mark"><div class="big">DaaS</div><div class="sub">EPISODIO IV</div></div></div>
+
+<section id="scene" aria-label="Texto animado">
+  <div id="plane">
+    <article id="crawl">
+      <h2>Episodio IV</h2>
+      <h2 class="title">Una nueva esperanza</h2>
+      <p>La República Académica atraviesa tiempos de incertidumbre. En los confines de la infraestructura tecnológica, una amenaza ancestral acecha a los administradores de sistemas: despliegues manuales, configuraciones inconsistentes y migraciones capaces de sumir plataformas enteras en el caos.</p>
+      <p>Pero no toda esperanza está perdida.</p>
+      <p>En la Universidad Nacional de Tucumán, dos jóvenes Padawan de la Orden de Ingeniería en Informática han emprendido una misión que podría cambiar el destino de innumerables servicios web.</p>
+      <p>Juan Ignacio Carrizo y Javier Augusto Nacchio, bajo la guía de su maestro, el Esp. Ing. Marcos Esteban Gerardo Soria, desarrollan una tecnología destinada a llevar la automatización a múltiples infraestructuras.</p>
+      <p>Su proyecto, conocido como DEPLOYMENT AS A SERVICE (DaaS), persigue un objetivo ambicioso: dominar los conocimientos de la Infraestructura como Código, controlar las fuerzas de la orquestación y desplegar servicios de manera rápida, segura y parametrizada.</p>
+      <p>Antes de alcanzar el rango de Ingenieros Jedi, los jóvenes Padawan deberán demostrar que sus conocimientos van más allá de la teoría y que sus creaciones resisten las pruebas del mundo real.</p>
+      <h3>El Consejo ha sido convocado</h3>
+      <p>En San Miguel de Tucumán, el 13 de agosto de 2026, a las 15:30 hs., se reúne la Comisión de Seguimiento del proyecto final de grado de la carrera de Ingeniería en Informática de la FACET, Universidad Nacional de Tucumán.</p>
+      <p>Integran la misión los alumnos Juan Ignacio Carrizo y Javier Augusto Nacchio; su director, el Esp. Ing. Marcos Esteban Gerardo Soria; y los miembros de la Comisión de Seguimiento: Esp. Lic. Javier Graña, Esp. Ing. Marcelo Más Valdecantos e Ing. León Jaimovich.</p>
+      <p>También participan los aliados del CEDITE: Esp. Lic. Pablo Nacusse, Esp. Ing. Lía Torres Auad, Mg. Lic. Nicolás Auvieux, Lic. Gustavo José y Paed. IGIP Ing. Fernanda Guzmán.</p>
+      <h3>Los aliados y el conocimiento del terreno</h3>
+      <p>La colaboración del CEDITE permite contrastar la propuesta con escenarios reales, analizar la infraestructura y los flujos operativos de campus virtuales como FacetVirtual e Instituto Técnico de Aguilares, y recabar requisitos clave para orientar el desarrollo.</p>
+      <p>En esta misión, los aliados aportan algo que ningún Padawan obtiene únicamente de los libros: experiencia práctica. Porque saber manejar un sable de luz es importante, pero actualizar una plataforma en producción sin dejarla fuera de servicio también demuestra dominio de la Fuerza.</p>
+      <h3>Los planos de la misión</h3>
+      <p>Los alumnos presentaron una herramienta basada en Infraestructura como Código (IaC) y Configuration as a Service (CaaS), destinada a orquestar despliegues rápidos, seguros y parametrizados en entornos On-Premise, máquinas virtuales y servicios Cloud.</p>
+      <p>El objetivo es transformar tareas manuales y propensas a errores en procesos reproducibles y controlados. Esta vez, no se busca una vulnerabilidad en la Estrella de la Muerte: se busca evitar que una actualización mal ejecutada provoque un incidente de infraestructura.</p>
+      <h3>El despertar del Wizard</h3>
+      <p>Se realizó una demostración interactiva del prototipo del Wizard, una interfaz de línea de comandos que recorre las etapas previstas para generar plantillas de infraestructura y despliegue.</p>
+      <p>Algunas opciones de menú fueron simuladas para ilustrar el flujo completo previsto y todavía no están implementadas. El prototipo permite visualizar el recorrido desde la selección de parámetros hasta la preparación de los artefactos necesarios.</p>
+      <p>La incursión fue prometedora, aunque la misión no está completa. Algunas rutas ya están trazadas; otras esperan su implementación. El Wizard continúa su entrenamiento.</p>
+      <h3>El Consejo Jedi examina los sistemas</h3>
+      <p>Durante el intercambio técnico con el CEDITE se analizaron escenarios con múltiples instancias, miles de usuarios activos y volúmenes significativos de almacenamiento; el uso de servidores virtuales, sistemas operativos de código abierto, servidores web y bases de datos relacionales; y las diferencias entre instalaciones iniciales y tareas de migración y actualización.</p>
+      <p>Se ratificó que el mayor valor de DaaS reside en automatizar y reducir errores durante las migraciones y actualizaciones, que suelen requerir ventanas de mantenimiento y versiones estables a largo plazo.</p>
+      <p>El verdadero desafío no es solo desplegar una plataforma desde cero. También hay que mantener una flota entera operativa mientras se actualizan sus sistemas. Y no es recomendable descubrir que una dependencia era incompatible cuando ya se está en el hiperespacio.</p>
+      <h3>El Imperio contraataca: grado de avance</h3>
+      <p>FASE 1 — INVESTIGACIÓN Y ESTADO DEL ARTE: completada en su totalidad.</p>
+      <p>FASE 2 — DESPLIEGUE MONOLÍTICO LOCAL: completada en su totalidad.</p>
+      <p>FASE 3 — DESARROLLO DEL WIZARD CLI Y GENERACIÓN DE PLANTILLAS: en ejecución, con avance intermedio.</p>
+      <p>La gestión del trabajo se mantiene bajo metodología Kanban, con versionado continuo del código fuente mediante GitHub.</p>
+      <p>Las dos primeras fases proporcionan una base sobre la cual continuar. La tercera representa el principal frente de trabajo: convertir el prototipo en una herramienta capaz de orquestar despliegues de manera consistente.</p>
+      <p>El Imperio no descansa, y los problemas de infraestructura tampoco. Cada escenario introduce variables y dependencias que deben contemplarse. La misión exige pruebas, validación y disciplina en cada cambio.</p>
+      <h3>La última misión antes de la graduación</h3>
+      <p>Quedan por completar el Wizard y el motor de plantillas de IaC y orquestación; desarrollar el módulo de integración para despliegues Cloud; ejecutar pruebas integrales y de carga con asesoramiento del personal técnico; y redactar la documentación técnica, los manuales de usuario y la memoria final de grado.</p>
+      <p class="center">TIEMPO ESTIMADO RESTANTE:<br>ENTRE 8 Y 12 SEMANAS.</p>
+      <p>La etapa final exigirá coordinar componentes, resolver problemas pendientes y comprobar que cada funcionalidad cumpla su propósito. Las pruebas permitirán evaluar el comportamiento en escenarios representativos y la documentación facilitará la comprensión y el uso de la solución.</p>
+      <p>La graduación espera en el horizonte. Los planos existen, la nave tiene sus primeras piezas ensambladas y los aliados han aportado información valiosa. Ahora queda comprobar que todos los sistemas funcionen juntos.</p>
+      <p>Los jóvenes Padawan deberán superar las pruebas finales para demostrar que están preparados para alcanzar el rango de Ingenieros Jedi.</p>
+      <h3>La misión continúa</h3>
+      <p>La Comisión de Seguimiento toma conocimiento del estado de avance, de los aportes surgidos del intercambio con el CEDITE y de las actividades pendientes para la finalización del proyecto.</p>
+      <p class="center">QUE LA FUERZA ACOMPAÑE LOS DESPLIEGUES.</p>
+      <p class="center">Que las dependencias sean compatibles y que ningún cambio llegue a producción sin haber sido probado.</p>
+      <p class="center">Y que, cuando se ejecute el último despliegue, la galaxia pueda disfrutar de algo extraordinario: una infraestructura que funcione como se esperaba, sin convocar a toda la flota de soporte.</p>
+      <p class="center">FIN DEL INFORME DE AVANCE</p>
+    </article>
+  </div>
+</section>
+
+<div class="endcard" id="endcard">
+  <div>
+    <h2>QUE LA FUERZA ACOMPAÑE LOS DESPLIEGUES</h2>
+    <p>La misión continúa. Los jóvenes Padawan aún deben completar su entrenamiento, superar las pruebas finales y demostrar que están preparados para convertirse en Ingenieros Jedi.</p>
+    <button id="replay">Volver a iniciar ↻</button>
+  </div>
+</div>
+
+<div id="yt"><div id="ytplayer"></div></div>
+<!-- Si dejás un archivo "intro.mp3" en la misma carpeta, se usa ese en lugar de YouTube -->
+<audio id="localAudio" src="intro.mp3" preload="auto"></audio>
+
+<div class="controls">
+  <button id="pause">Pausar ⏸</button>
+  <button id="slower">Más lento −</button>
+  <button id="faster">Más rápido +</button>
+  <button id="mute">Silenciar 🔇</button>
+  <button id="restart">Reiniciar ↻</button>
+  <button id="skip">Saltar al texto ↓</button>
+</div>
+<div class="hint">Espacio: pausa · ←/→: velocidad · M: silencio · R: reiniciar</div>
+
+<script>
+(() => {
+  // ===== Configuración =====
+  const YT_VIDEO_ID = '_D0ZQPqeJkk';  // "Star Wars Main Theme (Full)"
+  const MUSIC_START = 0;              // segundo del video donde arranca el golpe de la orquesta
+  const LONGAGO_MS = 2400;            // duración del "Hace mucho tiempo..."
+  const LOGO_MS = 7000;               // duración del logo alejándose
+  const CRAWL_DELAY_MS = 500;         // el texto arranca este tiempo después del logo
+  const CRAWL_SPEED = 0.1;            // fracción de la altura de pantalla por segundo
+
+  // ===== Estrellas =====
+  const canvas = document.getElementById('stars');
+  const ctx = canvas.getContext('2d');
+  let w, h, stars = [];
+  function resize() {
+    const dpr = devicePixelRatio || 1;
+    w = canvas.width = innerWidth * dpr;
+    h = canvas.height = innerHeight * dpr;
+    stars = Array.from({length: 320}, () => ({
+      x: Math.random()*w, y: Math.random()*h,
+      z: Math.random()*.9 + .15, r: (Math.random()*1.3 + .25) * dpr,
+      t: Math.random()*Math.PI*2
+    }));
+  }
+  function draw() {
+    ctx.fillStyle = '#000'; ctx.fillRect(0,0,w,h);
+    for (const s of stars) {
+      s.y += s.z * .18;
+      s.t += .02;
+      if (s.y > h) { s.y = 0; s.x = Math.random()*w; }
+      const a = Math.min(.95, s.z) * (.75 + .25*Math.sin(s.t));
+      ctx.fillStyle = `rgba(255,255,255,${a})`;
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI*2); ctx.fill();
+    }
+    requestAnimationFrame(draw);
+  }
+  resize(); draw(); addEventListener('resize', resize);
+
+  // ===== Música: intro.mp3 local si existe, si no YouTube =====
+  const statusEl = document.getElementById('status');
+  const localAudio = document.getElementById('localAudio');
+  let useLocal = false, ytReady = false, ytFailed = false, player = null, muted = false;
+
+  localAudio.addEventListener('canplaythrough', () => { useLocal = true; statusEl.textContent = 'Música: intro.mp3 local ✓'; }, {once:true});
+  localAudio.addEventListener('error', () => {}, {once:true});
+
+  window.onYouTubeIframeAPIReady = () => {
+    player = new YT.Player('ytplayer', {
+      width: 200, height: 200, videoId: YT_VIDEO_ID,
+      playerVars: { start: MUSIC_START, controls: 0, playsinline: 1, rel: 0,
+        ...(location.protocol.startsWith('http') ? { origin: location.origin } : {}) },
+      events: {
+        onReady: () => { ytReady = true; if (!useLocal) statusEl.textContent = 'Música: YouTube ✓'; },
+        onError: (e) => {
+          ytFailed = true;
+          if (!useLocal) statusEl.textContent = `YouTube no se pudo cargar (error ${e.data}). Abrilo desde un servidor web o poné un intro.mp3 al lado del HTML.`;
+        }
+      }
+    });
+  };
+  const tag = document.createElement('script');
+  tag.src = 'https://www.youtube.com/iframe_api';
+  tag.onerror = () => { if (!useLocal) statusEl.textContent = 'Sin conexión a YouTube: la animación anda igual, sin música.'; };
+  document.head.appendChild(tag);
+
+  // Se llama dentro del click para que el navegador permita el audio
+  function primeMusic() {
+    if (useLocal) { localAudio.muted = true; localAudio.play().catch(()=>{}); }
+    else if (ytReady && !ytFailed) { player.mute(); player.seekTo(MUSIC_START, true); player.playVideo(); }
+  }
+  function startMusic() {
+    if (useLocal) { localAudio.currentTime = 0; localAudio.muted = muted; localAudio.volume = 1; localAudio.play().catch(()=>{}); }
+    else if (ytReady && !ytFailed) { player.seekTo(MUSIC_START, true); player.setVolume(100); muted ? player.mute() : player.unMute(); player.playVideo(); }
+  }
+  function pauseMusic(p) {
+    if (useLocal) p ? localAudio.pause() : localAudio.play().catch(()=>{});
+    else if (ytReady && !ytFailed) p ? player.pauseVideo() : player.playVideo();
+  }
+  function stopMusic() {
+    if (useLocal) { localAudio.pause(); localAudio.currentTime = 0; }
+    else if (ytReady && !ytFailed) { player.pauseVideo(); }
+  }
+  function fadeOutMusic() {
+    let v = 100;
+    const id = setInterval(() => {
+      v -= 4;
+      if (useLocal) localAudio.volume = Math.max(0, v/100);
+      else if (ytReady && !ytFailed) player.setVolume(Math.max(0, v));
+      if (v <= 0) { clearInterval(id); stopMusic(); }
+    }, 120);
+  }
+  function setMuted(m) {
+    muted = m;
+    if (useLocal) localAudio.muted = m;
+    else if (ytReady && !ytFailed) m ? player.mute() : player.unMute();
+    document.getElementById('mute').textContent = m ? 'Sonido 🔊' : 'Silenciar 🔇';
+  }
+
+  // ===== Secuencia =====
+  const intro = document.getElementById('intro');
+  const longago = document.getElementById('longago');
+  const logo = document.getElementById('logo');
+  const logoMark = logo.querySelector('.mark');
+  const scene = document.getElementById('scene');
+  const plane = document.getElementById('plane');
+  const crawl = document.getElementById('crawl');
+  const endcard = document.getElementById('endcard');
+  const pauseBtn = document.getElementById('pause');
+  let anims = [], crawlAnim = null, rate = 1, paused = false, running = false;
+
+  function clearAll() {
+    anims.forEach(a => a.cancel()); anims = [];
+    crawlAnim = null;
+  }
+  // Temporizador hecho con una animación vacía: así se pausa junto con todo lo demás
+  function later(ms, fn) {
+    const t = document.body.animate([], {duration: ms});
+    t.onfinish = fn;
+    anims.push(t);
+  }
+
+  function playLongAgo() {
+    anims.push(longago.animate(
+      [{opacity:0}, {opacity:1, offset:.15}, {opacity:1, offset:.8}, {opacity:0}],
+      {duration: LONGAGO_MS, fill:'forwards'}));
+  }
+  function playLogo() {
+    logo.style.opacity = 1;
+    anims.push(logoMark.animate(
+      [{transform:'scale(2.6)', opacity:1}, {transform:'scale(.35)', opacity:1, offset:.75}, {transform:'scale(.05)', opacity:0}],
+      {duration: LOGO_MS, easing:'cubic-bezier(.2,.6,.35,1)', fill:'forwards'}));
+  }
+  function playCrawl() {
+    scene.classList.add('visible');
+    const planeH = plane.offsetHeight, textH = crawl.offsetHeight;
+    const distance = planeH + textH;
+    const duration = distance / (innerHeight * CRAWL_SPEED) * 1000;
+    crawlAnim = crawl.animate(
+      [{transform:`translateY(${planeH}px)`}, {transform:`translateY(${-textH}px)`}],
+      {duration, easing:'linear', fill:'forwards'});
+    crawlAnim.playbackRate = rate;
+    crawlAnim.onfinish = () => { endcard.classList.add('show'); fadeOutMusic(); running = false; };
+    anims.push(crawlAnim);
+  }
+
+  function start(skipIntro) {
+    clearAll();
+    endcard.classList.remove('show');
+    scene.classList.remove('visible');
+    logo.style.opacity = 0;
+    intro.classList.add('hidden');
+    paused = false; running = true; pauseBtn.textContent = 'Pausar ⏸';
+    primeMusic();
+    if (skipIntro) {
+      startMusic();
+      playCrawl();
+      return;
+    }
+    playLongAgo();
+    later(LONGAGO_MS, () => { startMusic(); playLogo(); });
+    later(LONGAGO_MS + CRAWL_DELAY_MS, playCrawl);
+  }
+  function togglePause() {
+    if (!running) return;
+    paused = !paused;
+    // Solo se tocan las que están en curso: play() sobre una animación terminada la reinicia
+    anims.forEach(a => {
+      if (paused && a.playState === 'running') a.pause();
+      else if (!paused && a.playState === 'paused') a.play();
+    });
+    pauseMusic(paused);
+    pauseBtn.textContent = paused ? 'Reanudar ▶' : 'Pausar ⏸';
+  }
+  function setRate(f) {
+    rate = Math.min(4, Math.max(.25, rate * f));
+    if (crawlAnim) crawlAnim.playbackRate = rate;
+  }
+  function reset() {
+    clearAll(); stopMusic(); running = false; paused = false;
+    endcard.classList.remove('show');
+    scene.classList.remove('visible');
+    logo.style.opacity = 0;
+    intro.classList.remove('hidden');
+    pauseBtn.textContent = 'Pausar ⏸';
+  }
+
+  document.getElementById('begin').addEventListener('click', () => start(false));
+  document.getElementById('replay').addEventListener('click', () => start(false));
+  document.getElementById('skip').addEventListener('click', () => start(true));
+  document.getElementById('restart').addEventListener('click', reset);
+  document.getElementById('slower').addEventListener('click', () => setRate(1/1.2));
+  document.getElementById('faster').addEventListener('click', () => setRate(1.2));
+  document.getElementById('mute').addEventListener('click', () => setMuted(!muted));
+  pauseBtn.addEventListener('click', togglePause);
+  document.addEventListener('keydown', e => {
+    if (e.code === 'Space') { e.preventDefault(); togglePause(); }
+    else if (e.key === 'ArrowRight') setRate(1.2);
+    else if (e.key === 'ArrowLeft') setRate(1/1.2);
+    else if (e.key.toLowerCase() === 'm') setMuted(!muted);
+    else if (e.key.toLowerCase() === 'r') reset();
+    else if (e.key === 'Enter' && !running) start(false);
+  });
+})();
+</script>
+</body>
+</html>
