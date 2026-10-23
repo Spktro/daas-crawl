@@ -154,9 +154,9 @@
   const YT_VIDEO_ID = '_D0ZQPqeJkk';  // "Star Wars Main Theme (Full)"
   const MUSIC_START = 0;              // segundo del video donde arranca el golpe de la orquesta
   const LONGAGO_MS = 2400;            // duración del "Hace mucho tiempo..."
-  const LOGO_MS = 7000;               // duración del logo alejándose
-  const CRAWL_DELAY_MS = 500;         // el texto arranca este tiempo después del logo
-  const CRAWL_SPEED = 0.1;            // fracción de la altura de pantalla por segundo
+  const LOGO_MS = 9500;               // duración del logo alejándose
+  const CRAWL_DELAY_MS = 3000;        // el texto arranca este tiempo después del logo
+  const CRAWL_SPEED = 0.055;          // fracción de la altura de pantalla por segundo
 
   // ===== Estrellas =====
   const canvas = document.getElementById('stars');
@@ -190,6 +190,7 @@
   const statusEl = document.getElementById('status');
   const localAudio = document.getElementById('localAudio');
   let useLocal = false, ytReady = false, ytFailed = false, player = null, muted = false;
+  let priming = false, musicStarted = false, onPlaying = null;
 
   localAudio.addEventListener('canplaythrough', () => { useLocal = true; statusEl.textContent = 'Música: intro.mp3 local ✓'; }, {once:true});
   localAudio.addEventListener('error', () => {}, {once:true});
@@ -201,6 +202,12 @@
         ...(location.protocol.startsWith('http') ? { origin: location.origin } : {}) },
       events: {
         onReady: () => { ytReady = true; if (!useLocal) statusEl.textContent = 'Música: YouTube ✓'; },
+        onStateChange: (e) => {
+          if (e.data !== YT.PlayerState.PLAYING) return;
+          // Cebado: apenas arranca, se deja en pausa en el punto de inicio y con buffer cargado
+          if (priming) { priming = false; player.pauseVideo(); player.seekTo(MUSIC_START, true); }
+          else if (onPlaying) { const f = onPlaying; onPlaying = null; f(); }
+        },
         onError: (e) => {
           ytFailed = true;
           if (!useLocal) statusEl.textContent = `YouTube no se pudo cargar (error ${e.data}). Abrilo desde un servidor web o poné un intro.mp3 al lado del HTML.`;
@@ -215,18 +222,32 @@
 
   // Se llama dentro del click para que el navegador permita el audio
   function primeMusic() {
-    if (useLocal) { localAudio.muted = true; localAudio.play().catch(()=>{}); }
-    else if (ytReady && !ytFailed) { player.mute(); player.seekTo(MUSIC_START, true); player.playVideo(); }
+    musicStarted = false; onPlaying = null;
+    if (useLocal) { localAudio.muted = true; localAudio.play().then(() => { localAudio.pause(); localAudio.currentTime = 0; }).catch(()=>{}); }
+    else if (ytReady && !ytFailed) { priming = true; player.mute(); player.seekTo(MUSIC_START, true); player.playVideo(); }
   }
-  function startMusic() {
-    if (useLocal) { localAudio.currentTime = 0; localAudio.muted = muted; localAudio.volume = 1; localAudio.play().catch(()=>{}); }
-    else if (ytReady && !ytFailed) { player.seekTo(MUSIC_START, true); player.setVolume(100); muted ? player.mute() : player.unMute(); player.playVideo(); }
+  // Llama a onStart cuando la música suena de verdad (o al segundo, si no hay música)
+  function startMusic(onStart) {
+    musicStarted = true;
+    let done = false;
+    const fire = () => { if (!done) { done = true; onStart(); } };
+    setTimeout(fire, 1000);
+    if (useLocal) {
+      localAudio.addEventListener('playing', fire, {once:true});
+      localAudio.currentTime = 0; localAudio.muted = muted; localAudio.volume = 1; localAudio.play().catch(()=>{});
+    } else if (ytReady && !ytFailed) {
+      if (priming) { priming = false; player.seekTo(MUSIC_START, true); }
+      onPlaying = fire;
+      player.setVolume(100); muted ? player.mute() : player.unMute(); player.playVideo();
+    } else fire();
   }
   function pauseMusic(p) {
+    if (!musicStarted) return;
     if (useLocal) p ? localAudio.pause() : localAudio.play().catch(()=>{});
     else if (ytReady && !ytFailed) p ? player.pauseVideo() : player.playVideo();
   }
   function stopMusic() {
+    musicStarted = false; priming = false; onPlaying = null;
     if (useLocal) { localAudio.pause(); localAudio.currentTime = 0; }
     else if (ytReady && !ytFailed) { player.pauseVideo(); }
   }
@@ -256,7 +277,7 @@
   const crawl = document.getElementById('crawl');
   const endcard = document.getElementById('endcard');
   const pauseBtn = document.getElementById('pause');
-  let anims = [], crawlAnim = null, rate = 1, paused = false, running = false;
+  let anims = [], crawlAnim = null, rate = 1, paused = false, running = false, generation = 0;
 
   function clearAll() {
     anims.forEach(a => a.cancel()); anims = [];
@@ -301,14 +322,19 @@
     intro.classList.add('hidden');
     paused = false; running = true; pauseBtn.textContent = 'Pausar ⏸';
     primeMusic();
+    const run = ++generation;
     if (skipIntro) {
-      startMusic();
+      startMusic(() => {});
       playCrawl();
       return;
     }
     playLongAgo();
-    later(LONGAGO_MS, () => { startMusic(); playLogo(); });
-    later(LONGAGO_MS + CRAWL_DELAY_MS, playCrawl);
+    // El logo espera a que la música suene de verdad, así el golpe coincide con su aparición
+    later(LONGAGO_MS, () => startMusic(() => {
+      if (run !== generation) return;
+      playLogo();
+      later(CRAWL_DELAY_MS, playCrawl);
+    }));
   }
   function togglePause() {
     if (!running) return;
