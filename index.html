@@ -223,8 +223,10 @@
   // Se llama dentro del click para que el navegador permita el audio
   function primeMusic() {
     musicStarted = false; onPlaying = null;
-    if (useLocal) { localAudio.muted = true; localAudio.play().then(() => { localAudio.pause(); localAudio.currentTime = 0; }).catch(()=>{}); }
-    else if (ytReady && !ytFailed) { priming = true; player.mute(); player.seekTo(MUSIC_START, true); player.playVideo(); }
+    // Se ceba con volumen 0 y no con mute: si arranca muteado, el navegador
+    // después no deja des-mutearlo fuera del click y queda en silencio
+    if (useLocal) { localAudio.volume = 0; localAudio.play().then(() => { localAudio.pause(); localAudio.currentTime = 0; }).catch(()=>{}); }
+    else if (ytReady && !ytFailed) { priming = true; player.unMute(); player.setVolume(0); player.seekTo(MUSIC_START, true); player.playVideo(); }
   }
   // Llama a onStart cuando la música suena de verdad (o al segundo, si no hay música)
   function startMusic(onStart) {
